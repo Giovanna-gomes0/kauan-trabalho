@@ -1,12 +1,13 @@
-// routes/musicasRoutes.js
-const express = require("express");
-const router = express.Router();
-const musicasController = require("../controllers/musicasController");
+# routes/musicas_routes.py
+from flask import Blueprint
+from controllers.musicas_controllers import (
+    criar_musica, listar_musicas, atualizar_musica, excluir_musica, buscar_por_genero
+)
 
-router.post("/", musicasController.criarMusica);
-router.get("/", musicasController.listarMusicas);
-router.get("/buscar", musicasController.buscarPorGenero); // Melhoria
-router.put("/:id", musicasController.atualizarMusica);
-router.delete("/:id", musicasController.excluirMusica);
+musicas_bp = Blueprint("musicas_bp", __name__)
 
-module.exports = router;
+musicas_bp.route("/musicas", methods=["POST"])(criar_musica)
+musicas_bp.route("/musicas", methods=["GET"])(listar_musicas)
+musicas_bp.route("/musicas/<int:id>", methods=["PUT"])(atualizar_musica)
+musicas_bp.route("/musicas/<int:id>", methods=["DELETE"])(excluir_musica)
+musicas_bp.route("/musicas/filtro", methods=["GET"])(buscar_por_genero)

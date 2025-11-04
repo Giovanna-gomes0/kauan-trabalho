@@ -1,76 +1,64 @@
-// controllers/musicasController.js
-let musicas = require("../models/musicaModel");
+# controllers/musicas_controller.py
+from flask import jsonify, request
+from models.musicas_models import musicas, gerar_id
 
-// Função auxiliar para gerar ID automático
-function gerarId() {
-  return Math.floor(Math.random() * 100000);
-}
+# POST - Criar música
+def criar_musica():
+    data = request.json
+    if not data:
+        return jsonify({"erro": "É necessário enviar dados em JSON"}), 400
 
-module.exports = {
-  // POST - Adicionar uma música
-  criarMusica: (req, res) => {
-    const { titulo, artista, genero, anoLancamento } = req.body;
+    campos = ["titulo", "artista", "genero", "anoLancamento"]
+    if not all(campo in data for campo in campos):
+        return jsonify({"erro": "Todos os campos são obrigatórios!"}), 400
 
-    if (!titulo || !artista || !genero || !anoLancamento) {
-      return res.status(400).json({ erro: "Todos os campos são obrigatórios!" });
+    nova_musica = {
+        "id": gerar_id(),
+        "titulo": data["titulo"],
+        "artista": data["artista"],
+        "genero": data["genero"],
+        "anoLancamento": data["anoLancamento"]
     }
+    musicas.append(nova_musica)
+    return jsonify({"mensagem": "Música cadastrada com sucesso!", "musica": nova_musica}), 201
 
-    const novaMusica = {
-      id: gerarId(),
-      titulo,
-      artista,
-      genero,
-      anoLancamento,
-    };
+# GET - Listar todas músicas
+def listar_musicas():
+    return jsonify(musicas)
 
-    musicas.push(novaMusica);
-    res.status(201).json({ mensagem: "Música cadastrada com sucesso!", musica: novaMusica });
-  },
+# PUT - Atualizar música
+def atualizar_musica(id):
+    data = request.json
+    musica = next((m for m in musicas if m["id"] == id), None)
+    if not musica:
+        return jsonify({"erro": "Música não encontrada!"}), 404
 
-  // GET - Listar todas as músicas
-  listarMusicas: (req, res) => {
-    res.json(musicas);
-  },
+    for campo in ["titulo", "artista", "genero", "anoLancamento"]:
+        if campo in data:
+            musica[campo] = data[campo]
 
-  // PUT - Atualizar dados de uma música
-  atualizarMusica: (req, res) => {
-    const { id } = req.params;
-    const { titulo, artista, genero, anoLancamento } = req.body;
+    return jsonify({"mensagem": "Música atualizada com sucesso!", "musica": musica})
 
-    const musica = musicas.find((m) => m.id == id);
-    if (!musica) return res.status(404).json({ erro: "Música não encontrada!" });
+# DELETE - Excluir música
+def excluir_musica(id):
+    global musicas
+    musica = next((m for m in musicas if m["id"] == id), None)
+    if not musica:
+        return jsonify({"erro": "Música não encontrada!"}), 404
 
-    if (titulo) musica.titulo = titulo;
-    if (artista) musica.artista = artista;
-    if (genero) musica.genero = genero;
-    if (anoLancamento) musica.anoLancamento = anoLancamento;
+    musicas = [m for m in musicas if m["id"] != id]
+    return jsonify({"mensagem": "Música excluída com sucesso!"})
 
-    res.json({ mensagem: "Música atualizada com sucesso!", musica });
-  },
+# MELHORIA - Buscar por gênero e ordenar por ano
+def buscar_por_genero():
+    genero = request.args.get("genero")
+    if not genero:
+        return jsonify({"erro": "Informe um gênero para busca."}), 400
 
-  // DELETE - Excluir uma música
-  excluirMusica: (req, res) => {
-    const { id } = req.params;
-    const index = musicas.findIndex((m) => m.id == id);
+    resultado = [m for m in musicas if genero.lower() in m["genero"].lower()]
+    if not resultado:
+        return jsonify({"mensagem": "Nenhuma música encontrada nesse gênero."}), 404
 
-    if (index === -1) return res.status(404).json({ erro: "Música não encontrada!" });
-
-    musicas.splice(index, 1);
-    res.json({ mensagem: "Música excluída com sucesso!" });
-  },
-
-  // MELHORIA: Buscar músicas por gênero (filtro)
-  buscarPorGenero: (req, res) => {
-    const { genero } = req.query;
-    if (!genero) return res.status(400).json({ erro: "Informe um gênero para busca." });
-
-    const resultado = musicas.filter((m) =>
-      m.genero.toLowerCase().includes(genero.toLowerCase())
-    );
-
-    if (resultado.length === 0)
-      return res.status(404).json({ mensagem: "Nenhuma música encontrada nesse gênero." });
-
-    res.json(resultado);
-  },
-};
+    # Ordena por ano de lançamento (melhoria)
+    resultado.sort(key=lambda x: x["anoLancamento"])
+    return jsonify(resultado)
